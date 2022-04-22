@@ -1,13 +1,10 @@
 const mongoose = require("mongoose");
-const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
-const morgan = require("morgan");
 const fs = require("fs");
 const path = require("path");
 
 const redis = require("redis");
 const url = require("url");
-const { sendEmail } = require("../helper/sendEmail");
 const { createOtp } = require("../helper/helperFunctions");
 const { uploadFile, deleteFile, updateFile } = require("../helper/fileHelper");
 
@@ -20,7 +17,7 @@ const { validationResult } = require("express-validator");
 const { response } = require("express");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
-dotenv.config();
+const Email = require("../utils/email");
 
 let redisClient;
 if (process.env.REDISCLOUD_URL) {
@@ -42,7 +39,7 @@ const registerUser = catchAsync(async (req, res, next) => {
 
   const validateEmailId = ValidateEmail(email);
   if (password.length === 0) {
-    throw new AppError(`Please enter password`, 404); // NJ-changes 13 Apr
+    throw new AppError(`Please enter password`, 400); // NJ-changes 13 Apr
   }
 
   const salt = await bcrypt.genSalt();
@@ -59,6 +56,9 @@ const registerUser = catchAsync(async (req, res, next) => {
     const savedUser = await user.save(user);
 
     if (savedUser) {
+      const url = `${req.protocol}://${req.get('host')}/welcome`;
+      new Email(email, url).sendWelcome()
+
       res.status(201).json({
         status: 1,
         data: { name: savedUser.name, avatar: savedUser.image },
@@ -70,6 +70,8 @@ const registerUser = catchAsync(async (req, res, next) => {
   } else {
     throw new AppError(`Invalid email address.`, 404); // NJ-changes 13 Apr
   }
+
+  
   // } catch (error) {
   //   if (error.code === 11000) {
   //     throw new AppError(
@@ -92,13 +94,13 @@ const loginUser = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    throw new AppError(`Email or password missing!`, 404); // NJ-changes 13 Apr
+    throw new AppError(`Email or password missing!`, 400); // NJ-changes 13 Apr
   }
 
   const validateEmail = ValidateEmail(email);
 
   if (!validateEmail) {
-    throw new AppError(`Email is not valid`, 404); // NJ-changes 13 Apr
+    throw new AppError(`Email is not valid`, 401); // NJ-changes 13 Apr
   }
 
   // const errors = validationResult(req)
@@ -118,7 +120,7 @@ const loginUser = catchAsync(async (req, res, next) => {
   );
 
   if (!isPasswordCorrect) {
-    throw new AppError(`Password is incorrect.`, 404); // NJ-changes 13 Apr
+    throw new AppError(`Password is incorrect.`, 401); // NJ-changes 13 Apr
   }
 
   // Token
@@ -133,6 +135,11 @@ const loginUser = catchAsync(async (req, res, next) => {
   const token = await jwtr.sign(id, process.env.JWT_SECRET, {
     expiresIn: "15d",
   });
+
+  // const url = `${req.protocol}://${req.get("host")}/me`;
+
+  // console.log(email, url);
+  // await new Email(email, url).sendWelcome();
 
   // Assign token to http cookies
   return res.status(200).json({
@@ -240,18 +247,20 @@ const userForgetPassword = catchAsync(async (req, res, next) => {
 
   const storeOTP = await store.save(store);
   if (!storeOTP) {
-    throw new AppError(`Some error occured in OTP store!`, 403); // NJ-changes 13 Apr
+    throw new AppError(`Some error occured in OTP store!`, 500); // NJ-changes 13 Apr
   }
 
-  // send email -> inside helper folder
-  sendEmail({ otp, to: email, msg: `Hello ${user.name}` });
+  const url = `${otp}`;
+  console.log("userpassword", email, url)
+
+  new Email(email, url).forgetPassword()
 
   return res.status(200).json({ success: true, message: `Email send to you!` });
 });
 
 /**
  * @desc        Reset password
- * @Endpoint    Post @/api/users/resetPassword
+ * @Endpoint    Post @/api/users/resetPasemailsword
  * @access      Token access
  */
 const resetForgetPassword = catchAsync(async (req, res, next) => {
@@ -260,14 +269,14 @@ const resetForgetPassword = catchAsync(async (req, res, next) => {
   // const email = req.cookies.email;
   const { email } = req.body;
   if (!email) {
-    throw new AppError(`Provide email`, 404); // NJ-changes 13 Apr
+    throw new AppError(`Provide email`, 400); // NJ-changes 13 Apr
   }
 
   // destructure to otp and password
   const { otp, password, passwordVerify } = req.body;
 
   if (!otp || !password || !passwordVerify) {
-    throw new AppError(`Enter all required fields.`, 404); // NJ-changes 13 Apr
+    throw new AppError(`Enter all required fields.`, 400); // NJ-changes 13 Apr
   }
 
   if (password !== passwordVerify) {
@@ -290,6 +299,8 @@ const resetForgetPassword = catchAsync(async (req, res, next) => {
     ); // NJ-changes 13 Apr
   }
 
+
+
   if (user.email === fp.email) {
     // update password of user
     const salt = await bcrypt.genSalt();
@@ -299,6 +310,9 @@ const resetForgetPassword = catchAsync(async (req, res, next) => {
 
     // delete the document from forget password using email
     await ForgetPassword.deleteMany({ user: user._id });
+
+    // SENDING FORGET MAIL USER
+
 
     // delete cookie email and other token
     return (
@@ -329,15 +343,14 @@ const userPasswordChagne = catchAsync(async (req, res, next) => {
 
   //  currentPassword could not be empty -----
   if (!currentPassword) {
-    throw new AppError(`Current password should not be empty`, 404); // NJ-changes 13 Apr
+    throw new AppError(`Current password should not be empty`, 400); // NJ-changes 13 Apr
   }
   //  new password could not be empty -----
   if (!newPassword) {
-    throw new AppError(`new password should not be empty`, 404); // NJ-changes 13 Apr
+    throw new AppError(`new password should not be empty`, 400); // NJ-changes 13 Apr
   }
   //  new password should not match current password -----
-  if (currentPassword === newPassword) {
-    throw new AppError(`Current and new password should be same`, 401); // NJ-changes 13 Apr
+  if (currentPassword === newPassword) {    throw new AppError(`Current and new password should be same`, 401); // NJ-changes 13 Apr
   }
 
   const user = await Users.findById(req.user);
@@ -352,7 +365,7 @@ const userPasswordChagne = catchAsync(async (req, res, next) => {
     user.passwordHash
   );
   if (!passwordCompare) {
-    throw new AppError(`Current password is incorrect`, 404); // NJ-changes 13 Apr
+    throw new AppError(`Current password is incorrect`, 401); // NJ-changes 13 Apr
   }
   // checking new password and hashing it
   const newPasswordHash = await bcrypt.hash(newPassword, salt);
