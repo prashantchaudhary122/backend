@@ -4,15 +4,18 @@ const logsSchema = mongoose.Schema(
   {
     file: {
       type: String,
-      required: [true, "Logs file name is required."],
+      required: [true, "Log file name is required."],
     },
     date: {
       type: Date,
-      required: [true, "Logs date is required."],
+      required: [true, "Log date is required."],
     },
     message: {
       type: String,
-      required: [true, "Log message is required"],
+      // required: [true, "Log message is required"],
+    },
+    filePath: {
+      type: String
     },
     type: {
       type: String,

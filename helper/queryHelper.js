@@ -4,7 +4,7 @@ class QueryHelper {
       this.queryStr = queryStr;
   }
 
-  filter() {
+  logFilter() {
       const queryObj = { ...this.queryStr };
       const excludedFields = ['page', 'sort', 'limit', 'fields'];
       excludedFields.forEach(el => delete queryObj[el]);
@@ -28,9 +28,31 @@ class QueryHelper {
       queryStr = queryStr.replace("logType", "log.type")
       queryStr = queryStr.replace("createdAt", "log.date")
       console.log(queryStr)
-      this.query = this.query.find(JSON.parse(queryStr)).lean().maxTimeMS(10000).select({'version':1, 'type': 1, 'device': 1, 'log.date': 1, 'log.type': 1, 'log.message': 1, 'createdAt':1})
+      this.query = this.query.find(JSON.parse(queryStr)).lean().maxTimeMS(10000).select({'version':1, 'type': 1, 'device': 1, 'log.date': 1, 'log.type': 1, 'log.message': 1, 'log.file': 1, 'log.filePath': 1, 'createdAt':1})
       return this;
   }
+
+  filter() {
+    const queryObj = { ...this.queryStr };
+    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    excludedFields.forEach(el => delete queryObj[el]);
+    let dt = new Date(queryObj["endDate"])
+    dt.setDate(dt.getDate()+1)
+    if (queryObj.startDate && queryObj.endDate) {
+        queryObj.createdAt = { gte: new Date(queryObj["startDate"]), lte: dt }
+    } else if (queryObj.startDate) {
+        queryObj.createdAt = { gte: new Date(queryObj["startDate"]) }
+    } else if (queryObj.endDate) {
+        queryObj.createdAt = { lte: dt }
+    }
+    
+    let queryStr = JSON.stringify(queryObj);
+    console.log(queryObj)
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
+    console.log(queryStr)
+    this.query = this.query.find(JSON.parse(queryStr)).lean().maxTimeMS(10000)
+    return this;
+}
 
   sort() {
       if (this.queryStr.sort) {
@@ -51,17 +73,6 @@ class QueryHelper {
       return this;
   }
 
-  // logFilter() {
-  //     const queryObj = { ...this.queryStr };
-  //     let result
-  //     if (queryObj.logType) {
-  //         result = (queryObj.logType).split('-');
-  //         this.query = this.query.find({ logType: result });
-  //     }
-
-  //     return this;
-
-  // }
 }
 
 module.exports = QueryHelper;

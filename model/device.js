@@ -1,33 +1,18 @@
 const mongoose = require("mongoose");
 
-const osSchema = mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "OS name is required"],
-  },
-  // version: {
-  //   type: String,
-  //   required: [true, "OS version is required"],
-  // },
-  type: {
-    type: String,
-    enum: ["Linux", "Windows", "MacOS", "Other"],
-  },
-});
-
 const deviceSchema = mongoose.Schema(
   {
     did: {
       type: String,
       required: [true, "Device id is required."],
-      validate: {
-        validator: function (v) {
-          return /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4})$/.test(
-            v
-          );
-        },
-        message: "{VALUE} is not a valid device id.",
-      },
+      // validate: {
+      //   validator: function (v) {
+      //     return /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4})$/.test(
+      //       v
+      //     );
+      //   },
+        // message: "{VALUE} is not a valid device id.",
+      // },
     },
     name: {
       type: String,
@@ -44,13 +29,13 @@ const deviceSchema = mongoose.Schema(
     os: {
       name: {
         type: String,
-        required: [true,]
+        required: [true, "OS name is required."],
       },
       type: {
         type: String,
-        enum: ["linux", "windows", "iOS", "other"]
+        enum: ["linux", "windows", "iOS", "other"],
+        required: [true, "OS type is required."],
       },
-
     },
     battery: {
       type: String,

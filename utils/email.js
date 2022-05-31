@@ -7,16 +7,16 @@ module.exports = class Email {
     this.to = user;
     this.firstName = user.split("@")[0];
     this.url = url;
-    this.from = `LogCat Support <${process.env.MAIL_FROM}>`;
-
-    // console.log("first", user, url);
+    this.from = `LogCat  <${process.env.MAIL_FROM}>`;
+    console.log("user", user, url);
   }
 
   newTransport() {
-    if (process.env.NODE_ENV === "production") {
-      // Sendgrid
-      return 1;
-    }
+    // if (process.env.NODE_ENV === "PRODUCTION") {
+    //   // Sendgrid
+    //   return 1;
+    //   // console.log("this code is running");
+    // }
 
     return nodemailer.createTransport({
       host: process.env.MAIL_HOST,
@@ -40,6 +40,8 @@ module.exports = class Email {
       }
     );
 
+    console.log("html", html);
+
     // 2) Define email options
     const mailOptions = {
       from: this.from,
@@ -49,10 +51,15 @@ module.exports = class Email {
       text: htmlToText.fromString(html),
     };
 
-    console.log("first", mailOptions);
+    console.log("mailOptions", mailOptions);
 
     // 3) Create a transport and send email
-    await this.newTransport().sendMail(mailOptions);
+    await this.newTransport().sendMail(mailOptions, (err, info) => {
+      if (err) {
+        console.log("error", err);
+      }
+      console.log("info", info);
+    });
   }
 
   async sendWelcome() {
@@ -60,12 +67,10 @@ module.exports = class Email {
   }
 
   async sendCrash() {
-    await this.send("crash", "Crash Notification: LogCat")
+    await this.send("crash", "Crash Notification: LogCat");
   }
 
   async forgetPassword() {
-    await this.send("forgetPassword", "Password Reset OTP: LogCat")
+    await this.send("forgetPassword", "Password Reset OTP: LogCat");
   }
-
-
 };
