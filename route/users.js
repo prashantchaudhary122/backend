@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-const { check } = require("express-validator");
 
 const {
     registerUser,
@@ -10,14 +9,13 @@ const {
     logoutUser,
     userForgetPassword,
     resetForgetPassword,
-    userPasswordChagne,
+    userPasswordChange,
 } = require('../controller/users.js')
 
 const {
-    authUser
-} = require('../middleware/authenticate')
+    isAuth
+} = require('../middleware/authMiddleware')
 
-const middlewares = [check('email').isEmail().normalizeEmail(), check('password').trim().isLength(5)]
 
 // AUTH Route
 // Unprotected
@@ -29,11 +27,11 @@ router.post("/auth/forget", userForgetPassword);
 router.post("/auth/resetPassword", resetForgetPassword);
 
 // Protected
-router.get('/auth/logout',authUser,logoutUser)
+router.get('/auth/logout',isAuth,logoutUser)
 
 // USERS Route
 // Protected Route
-router.put('/users/update',authUser,updateUserProfile)
-router.put("/users/changepassword", authUser, userPasswordChagne);
+router.put('/users/update',isAuth,updateUserProfile)
+router.put("/users/changepassword", isAuth, userPasswordChange);
 
 module.exports = router;

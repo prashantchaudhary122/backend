@@ -28,8 +28,8 @@ const projectSchema = mongoose.Schema({
     },
     reportEmail: {
         type: [Object],
-        unique:true,
-        required: [true, 'Collection name is required.']
+        // unique:true,
+        // required: [true, 'Collection name is required.']
     },
     status: {
         type: Boolean,
