@@ -3,6 +3,9 @@ const { getDaysArray } = require("../helper/helperFunctions");
 const Device = require("../model/device");
 const QueryHelper = require("../helper/queryHelper");
 const Email = require("../utils/email");
+const unzipper = require('unzipper');
+const fs = require('fs');
+const fstream = require('fstream')
 
 const createLogs = async (req, res) => {
   try {
@@ -140,6 +143,8 @@ const createLogsV2 = async (req, res) => {
 
     const modelReference = require(`../model/${collectionName}`);
 
+    const d = new Date();
+
     if (req.contentType === "json") {
       const { version, type, log, device } = req.body;
 
@@ -176,7 +181,7 @@ const createLogsV2 = async (req, res) => {
           data: {
             err: {
               generatedTime: new Date(),
-              errMsg: "Log message is reequired",
+              errMsg: "Log message is required",
               msg: "Log message is required",
               type: "ValidationError",
             },
@@ -190,7 +195,7 @@ const createLogsV2 = async (req, res) => {
         device: isDeviceSaved._id,
         log: {
           file: log.file,
-          date: log.date,
+          date: log.date || d.toISOString(),
           filePath: "",
           message: decodeURI(log.msg),
           type: log.type,
@@ -212,7 +217,7 @@ const createLogsV2 = async (req, res) => {
           },
         });
       } else {
-        
+
         // if (log.type == "error") {
         //   findProjectWithCode.reportEmail.map((email) => {
         //     const url = `${log.msg}`;
@@ -223,12 +228,26 @@ const createLogsV2 = async (req, res) => {
 
         res.status(201).json({
           status: 1,
-          data: { isLoggerSaved },
+          data: { log : isLoggerSaved },
           message: "Successful",
         });
       }
 
     } else if (req.contentType === "formData") {
+
+      fs.createReadStream(req.file.path).pipe(unzipper.Extract({ path: './public/uploads' }));
+
+      const fileNameArr = []
+
+      fs.createReadStream(req.file.path)
+        .pipe(unzipper.Parse())
+        .on('entry', entry => {
+          fileNameArr.push(entry)
+          entry.autodrain()
+        })
+        .promise()
+        .then(() => console.log('Files unzipped'), e => console.log('error', e));
+
       const Dvc = await new Device({
         did: req.body.did,
         name: req.body.deviceName,
@@ -256,30 +275,44 @@ const createLogsV2 = async (req, res) => {
         });
       }
 
-      const putDataIntoLoggerDb = await new modelReference({
-        version: req.body.version,
-        type: req.body.type,
-        device: isDeviceSaved._id,
-        log: {
-          file: req.body.file,
-          date: req.body.date,
-          filePath: req.file.originalname,
-          message: decodeURI(req.body.logMsg),
-          type: req.body.logType,
-        },
+      let fileNamePromise = fileNameArr.map(async (fileName) => {
+        console.log(fileName.path)
+        const putDataIntoLoggerDb = new modelReference({
+          version: req.body.version,
+          type: req.body.type,
+          device: isDeviceSaved._id,
+          log: {
+            file: fileName.path,
+            date: d.toISOString(),
+            filePath: `uploads/${fileName.path}`,
+            message: "",
+            type: "error",
+          },
+        });
+        return putDataIntoLoggerDb.save(putDataIntoLoggerDb);
       });
 
-      const isLoggerSaved = await putDataIntoLoggerDb.save(putDataIntoLoggerDb);
+      let logs = await Promise.allSettled(fileNamePromise);
 
-      if (!isLoggerSaved) {
-        return res.status(500).json({
-          status: 0,
+      var logsErrArr = []
+      var logsErrMsgArr = []
+
+      logs.map(log => {
+        logsErrArr.push(log.status)
+        if (log.status === "rejected") {
+          logsErrMsgArr.push(log.reason.message)
+        }
+      })
+
+      if (!logsErrArr.includes("fulfilled")) {
+        return res.status(400).json({
+          status: -1,
           data: {
             err: {
               generatedTime: new Date(),
-              errMsg: "Project not saved",
-              msg: "Project not saved",
-              type: "Internal Server Error",
+              errMsg: logsErrMsgArr.join(" | "),
+              msg: `Error saving ${logsErrMsgArr.length} out of ${logs.length} log(s)`,
+              type: "ValidationError",
             },
           },
         });
@@ -295,7 +328,7 @@ const createLogsV2 = async (req, res) => {
 
         res.status(201).json({
           status: 1,
-          data: { isLoggerSaved },
+          data: { logs },
           message: "Successful",
         });
       }
@@ -364,22 +397,33 @@ const createAlerts = async (req, res, next) => {
       return putDataIntoLoggerDb.save(putDataIntoLoggerDb);
     });
 
-    let isLoggerSaved = await Promise.allSettled(dbSavePromise);
-    if (isLoggerSaved) {
+    let alerts = await Promise.allSettled(dbSavePromise);
+
+    var alertsErrArr = []
+    var alertsErrMsgArr = []
+
+    alerts.map(alert => {
+      alertsErrArr.push(alert.status)
+      if (alert.status === "rejected") {
+        alertsErrMsgArr.push(alert.reason.message)
+      }
+    })
+
+    if (!alertsErrArr.includes("rejected")) {
       return res.status(201).json({
         status: 1,
-        data: {},
+        data: { alerts },
         message: "Successful",
       });
     } else {
-      res.status(500).json({
-        status: 0,
+      res.status(400).json({
+        status: -1,
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Log not saved",
-            msg: "Log not saved",
-            type: "MongodbError",
+            errMsg: alertsErrMsgArr.join(" | "),
+            msg: `Error saving ${alertsErrMsgArr.length} out of ${alerts.length} alert(s)`,
+            type: "ValidationError",
           },
         },
       });
