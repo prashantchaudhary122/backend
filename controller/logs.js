@@ -625,7 +625,7 @@ const getAlertsWithFilter = async (req, res) => {
 
     // Sending type name instead of type code
 
-    return res.status(200).json({
+    return res.status(200).json({ 
       status: 1,
       message: "Getting all alerts",
       data: {
