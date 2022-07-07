@@ -56,7 +56,7 @@ app.all("*", (req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`active on port ${PORT}`));
+module.exports = app.listen(PORT, () => console.log(`active on port ${PORT}`));
 
 // unhandledRejection Error handling
 process.on("unhandledRejection", (err) => {
