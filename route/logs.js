@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const { body } = require('express-validator');
 var maxSize = 1 * 1024 * 1024
 
 // FILE UPLOAD WITH MULTER 
@@ -26,7 +27,7 @@ const {
   getErrorCountByOSArchitecture,
   crashlyticsData,
   crashFreeUsersDatewise,
-  getProjectWithFilter,
+  getFilteredLogs,
   getAlertsWithFilter,
   getErrorCountByVersion,
 } = require("../controller/logs");
@@ -58,6 +59,7 @@ router.post(
           },
         });
       } else if (err) {
+        console.log(err)
         // An unknown error occurred when uploading.
         return res.status(500).json({
           status: -1,
@@ -78,10 +80,15 @@ router.post(
   validateHeader,
   createLogsV2
 );
-router.post("/alerts/:project_code", createAlerts);
+router.post("/alerts/:project_code",
+  body('did').notEmpty(),
+  body('type').notEmpty(),
+  body('ack.*.code').notEmpty(),
+  body('ack.*.timestamp').notEmpty(),
+  createAlerts);
 
 //Protected Route
-router.get("/:projectCode", isAuth, getProjectWithFilter);
+router.get("/:projectCode", isAuth, getFilteredLogs);
 router.get("/getLogsCount/:projectCode", isAuth, getLogsByLogType);
 router.get("/datewiselogcount/:projectCode", isAuth, dateWiseCrashCount);
 router.get(

@@ -1,9 +1,18 @@
+const fs = require('fs')
 const Projects = require("../model/project");
 const { getDaysArray } = require("../helper/helperFunctions");
 const Device = require("../model/device");
-const QueryHelper = require("../helper/queryHelper");
 const Email = require("../utils/email");
 const decompress = require('decompress');
+const { validationResult } = require('express-validator');
+const AWS = require('aws-sdk');
+const path = require('path');
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  Bucket: process.env.S3_BUCKET,
+  region: 'ap-south-1'
+});
 
 // This function will be replaced by createLogsV2 
 const createLogs = async (req, res) => {
@@ -142,8 +151,6 @@ const createLogsV2 = async (req, res) => {
 
     const modelReference = require(`../model/${collectionName}`);
 
-    const totalCount = await modelReference.estimatedDocumentCount({})
-
     const d = new Date();
 
     if (req.contentType === "json") {
@@ -223,10 +230,6 @@ const createLogsV2 = async (req, res) => {
         var sentEmailErrArr = []
         var sentEmailErrMsgArr = []
 
-        findProjectWithCode.totalCount = totalCount + 1;
-
-        const updatedProjectData = await findProjectWithCode.save();
-
         if (log.type == "error" && findProjectWithCode.reportEmail.length) {
 
 
@@ -262,6 +265,10 @@ const createLogsV2 = async (req, res) => {
     } else if (req.contentType === "formData") {
 
       const files = await decompress(req.file.path, `./public/uploads/${req.body.did}`)
+
+      // Delete zip file after unzipping it
+      fs.unlinkSync(`./${req.file.path}`)
+
       console.log("files length: ", files.length)
       const Dvc = await new Device({
         did: req.body.did,
@@ -277,7 +284,7 @@ const createLogsV2 = async (req, res) => {
       const isDeviceSaved = await Dvc.save(Dvc);
 
       if (!isDeviceSaved) {
-        res.status(500).json({
+        return res.status(500).json({
           status: 0,
           data: {
             err: {
@@ -290,6 +297,18 @@ const createLogsV2 = async (req, res) => {
         });
       }
 
+      let s3Promise = files.length && files.map((file) => {
+        const fileContent = fs.readFileSync(`${__dirname}/../public/uploads/${req.body.did}/${file.path}`);
+        // Setting up S3 upload parameters
+        const params = {
+          Bucket: process.env.S3_BUCKET,
+          Key: `${req.body.did}/${file.path}`,
+          Body: fileContent
+        };
+        console.log('params', params)
+        return s3.upload(params).promise()
+      });
+
       let fileNamePromise = files.length && files.map(async (file) => {
         console.log(file.path)
         let putDataIntoLoggerDb = await new modelReference({
@@ -299,7 +318,7 @@ const createLogsV2 = async (req, res) => {
           log: {
             file: file.path,
             date: d.toISOString(),
-            filePath: `uploads/${req.body.did}/${file.path}`,
+            filePath: `${req.body.did}/${file.path}`,
             message: "",
             type: "error",
           },
@@ -307,21 +326,18 @@ const createLogsV2 = async (req, res) => {
         return putDataIntoLoggerDb.save(putDataIntoLoggerDb);
       });
 
+      let s3Response = await Promise.allSettled(s3Promise)
       let logs = await Promise.allSettled(fileNamePromise);
 
       var logsErrArr = []
       var logsErrMsgArr = []
 
-      logs.map(log => {
+      logs.length && logs.map(log => {
         logsErrArr.push(log.status)
         if (log.status === "rejected") {
           logsErrMsgArr.push(log.reason.message)
         }
       })
-
-      findProjectWithCode.totalCount = totalCount + logs.length;
-
-      const updatedProjectData = await findProjectWithCode.save();
 
       if (!logsErrArr.includes("fulfilled")) {
         return res.status(400).json({
@@ -337,6 +353,7 @@ const createLogsV2 = async (req, res) => {
         });
       } else {
 
+        var s3ResponseStatus = []
         var emailPromise = []
         var sentEmails = []
         var sentEmailErrArr = []
@@ -347,7 +364,6 @@ const createLogsV2 = async (req, res) => {
           emailPromise = findProjectWithCode.reportEmail.map(email => {
             logs.map(log => {
               const url = `${log.value.log.filePath}`;
-              // console.log(url)
               return new Email(email, url).sendCrash();
             })
           })
@@ -363,14 +379,24 @@ const createLogsV2 = async (req, res) => {
 
         }
 
+        s3ResponseStatus = s3Response.length && s3Response.map(s3Res => s3Res.status)
+
+        // Delete Files after saving to DB and S3 
+        if (!s3ResponseStatus.includes('rejected')) {
+          files.length && files.map(async file => {
+            fs.unlinkSync(path.join("public", "uploads", `${req.body.did}/${file.path}`))
+          })
+        }
+
+
         res.status(201).json({
           status: 1,
           data: {
-            crashEmail: {
+            crashEmail: sentEmails.length ? {
               status: sentEmailErrArr.length && sentEmailErrArr.includes("rejected") ? 0 : 1,
               errMsg: sentEmailErrMsgArr.length ? sentEmailErrMsgArr.join(" | ") : "",
               msg: sentEmailErrMsgArr.length ? `Error sending ${sentEmailErrMsgArr.length} out of ${sentEmails.length} log(s)` : "Email(s) sent successfully."
-            }
+            } : {}
           },
           message: "Successful",
         });
@@ -402,6 +428,23 @@ const createAlerts = async (req, res, next) => {
     const { project_code } = req.params;
     // check project exist or not
     const findProjectWithCode = await Projects.findOne({ code: project_code });
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: errors.array().map((err) => {
+              return `${err.msg}: ${err.param}`
+            }).join(" | "),
+            msg: "Invalid data entered.",
+            type: "ValidationError",
+          },
+        },
+      });
+    }
 
     if (!findProjectWithCode) {
       return res.status(404).json({
@@ -492,7 +535,7 @@ const createAlerts = async (req, res, next) => {
  *
  */
 
-const getProjectWithFilter = async (req, res) => {
+const getFilteredLogs = async (req, res) => {
   try {
     const { projectCode } = req.params;
 
@@ -532,8 +575,8 @@ const getProjectWithFilter = async (req, res) => {
 
     var sortOperator = { "$sort": {} }
     let sort = req.query.sort || "-createdAt"
-    
-    sort.includes("-") ? sortOperator["$sort"][sort.replace("-","")] = -1 : sortOperator["$sort"][sort] = 1
+
+    sort.includes("-") ? sortOperator["$sort"][sort.replace("-", "")] = -1 : sortOperator["$sort"][sort] = 1
 
     var matchOperator = {
       "$match": {
@@ -546,11 +589,11 @@ const getProjectWithFilter = async (req, res) => {
     }
     let logMatch = req.query.logType
     logMatch ? matchOperator["$match"]["log.type"] = logMatch : delete matchOperator["$match"]["log.type"]
-    
+
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 500;
     let skip = (page - 1) * limit;
-    
+
     const data = await collectionName.aggregate(
       [
         {
@@ -587,8 +630,8 @@ const getProjectWithFilter = async (req, res) => {
       status: 1,
       message: "Getting all logs",
       data: {
-        count: data[0]?.totalRecords[0]?.total, 
-        pageLimit: data[0]?.data.length, 
+        count: data[0]?.totalRecords[0]?.total,
+        pageLimit: data[0]?.data.length,
         logs: data[0]?.data
       }
     });
@@ -653,8 +696,8 @@ const getAlertsWithFilter = async (req, res) => {
 
     var sortOperator = { "$sort": {} }
     let sort = req.query.sort || "-createdAt"
-    
-    sort.includes("-") ? sortOperator["$sort"][sort.replace("-","")] = -1 : sortOperator["$sort"][sort] = 1
+
+    sort.includes("-") ? sortOperator["$sort"][sort.replace("-", "")] = -1 : sortOperator["$sort"][sort] = 1
 
     var matchOperator = {
       "$match": {
@@ -1133,9 +1176,24 @@ const getErrorCountByOSArchitecture = async (req, res) => {
 const getLogsByLogType = async (req, res) => {
   try {
     const { projectCode } = req.params;
+
+    if (!req.params.projectCode) {
+      return res.status(400).json({
+        status: 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: "Project type not provided.",
+            msg: "Project type not provided.",
+            type: "Mongodb Error",
+          },
+        },
+      });
+    }
+
     const isProjectExist = await Projects.findOne({ code: projectCode });
     if (!isProjectExist) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1154,8 +1212,8 @@ const getLogsByLogType = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Project code not provided.",
-            msg: "Project code not provided.",
+            errMsg: "Project type not provided.",
+            msg: "Project type not provided.",
             type: "Mongodb Error",
           },
         },
@@ -1163,28 +1221,14 @@ const getLogsByLogType = async (req, res) => {
     }
 
     if (!req.query.startDate || !req.query.endDate) {
-      return res.status(500).json({
+      return res.status(400).json({
         status: 0,
         data: {
           err: {
             generatedTime: new Date(),
             errMsg: "Provide start date and end date.",
             msg: "Provide start date and end date.",
-            type: "Client Error",
-          },
-        },
-      });
-    }
-
-    if (!req.params.projectCode) {
-      return res.status(400).json({
-        status: 0,
-        data: {
-          err: {
-            generatedTime: new Date(),
-            errMsg: "Project type not provided.",
-            msg: "Project type not provided.",
-            type: "Mongodb Error",
+            type: "ValidationError",
           },
         },
       });
@@ -1912,7 +1956,7 @@ module.exports = {
   createLogs,
   createLogsV2,
   createAlerts,
-  getProjectWithFilter,
+  getFilteredLogs,
   getAlertsWithFilter,
   crashFreeUsersDatewise,
   crashlyticsData,

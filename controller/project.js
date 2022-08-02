@@ -36,19 +36,20 @@ const getAllRegisteredProjects = async (req, res) => {
 const createNewProject = async (req, res) => {
   try {
     const { name, description, device_type } = req.body;
+
     // device type will be  array
     const arrayOfObjects = [];
 
     const typeCodeArray = [];
 
-    if (device_type.length === 0) {
+    if (!device_type.length || !name) {
       return res.status(400).json({
         status: 0,
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Please provide atleast one device name",
-            msg: "Please provide atleast one device name",
+            errMsg: "Invalid data entered.",
+            msg: "Invalid data entered.",
             type: "Internal Server Error",
           },
         },
@@ -279,25 +280,10 @@ const createNewProject = async (req, res) => {
 const getProjectWithProjectCode = async (req, res) => {
   try {
     const { projectCode } = req.params;
-    // if not enter projectCode
-
-    if (!projectCode) {
-      return res.status(400).json({
-        status: 0,
-        data: {
-          err: {
-            generatedTime: new Date(),
-            errMsg: "Project not found",
-            msg: "Project not found",
-            type: "Internal Server Error",
-          },
-        },
-      });
-    }
 
     const getProject = await Projects.findOne({ code: projectCode });
     if (!getProject) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -626,9 +612,23 @@ const getProjectDetails = async (req, res) => {
   try {
     const { projectCode } = req.params;
 
+    if (!projectCode) {
+      return res.status(400).json({
+        status: 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: "Project code required.",
+            msg: "Project code required.",
+            type: "Internal Server Error",
+          },
+        },
+      });
+    }
+
     const projectCollection = await Projects.findOne({ code: projectCode });
     if (!projectCollection) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
