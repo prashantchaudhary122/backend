@@ -5,6 +5,7 @@ const Users = require("../model/users");
 const ForgetPassword = require("../model/forgetPassword");
 const Email = require("../utils/email");
 let redisClient = require("../config/redisInit");
+const { validationResult } = require('express-validator');
 
 const jwtr = new JWTR(redisClient);
 /**
@@ -15,6 +16,23 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     const emailTaken = await Users.findOne({ email: email });
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: errors.array().map((err) => {
+              return `${err.msg}: ${err.param}` 
+            }).join(" | "), 
+            msg: "Invalid data entered.",
+            type: "ValidationError",
+          },
+        },
+      });
+    }
 
     if (emailTaken) {
       // throw new AppError(`Email already taken`, 409);
@@ -107,15 +125,18 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
         status: 0,
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Email or password missing!",
-            msg: "Email or password missing!",
-            type: "Client Error",
+            errMsg: errors.array().map((err) => {
+              return `${err.msg}: ${err.param}` 
+            }).join(" | "), 
+            msg: "Invalid data entered.",
+            type: "ValidationError",
           },
         },
       });
@@ -248,6 +269,23 @@ const userForgetPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: errors.array().map((err) => {
+              return `${err.msg}: ${err.param}` 
+            }).join(" | "), 
+            msg: "Invalid data entered.",
+            type: "ValidationError",
+          },
+        },
+      });
+    }
+
     const user = await Users.findOne({ email });
 
     if (!user) {
@@ -317,34 +355,20 @@ const userForgetPassword = async (req, res) => {
  */
 const resetForgetPassword = async (req, res) => {
   try {
-    // look for email
-    const { email } = req.body;
-    if (!email) {
+    const { email, otp, password, passwordVerify } = req.body;
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
         status: 0,
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Provide email",
-            msg: "Provide email",
-            type: "Internal Server Error",
-          },
-        },
-      });
-    }
-
-    // destructure to otp and password
-    const { otp, password, passwordVerify } = req.body;
-
-    if (!otp || !password || !passwordVerify) {
-      return res.status(400).json({
-        status: 0,
-        data: {
-          err: {
-            generatedTime: new Date(),
-            errMsg: "Enter all required fields.",
-            msg: "Enter all required fields.",
-            type: "Internal Server Error",
+            errMsg: errors.array().map((err) => {
+              return `${err.msg}: ${err.param}`
+            }).join(" | "),
+            msg: "Invalid data entered.",
+            type: "ValidationError",
           },
         },
       });
@@ -356,9 +380,9 @@ const resetForgetPassword = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Make sure your password match.",
-            msg: "Make sure your password match.",
-            type: "Internal Server Error",
+            errMsg: "Make sure your passwords match.",
+            msg: "Make sure your passwords match.",
+            type: "ValidationError",
           },
         },
       });
@@ -424,10 +448,7 @@ const resetForgetPassword = async (req, res) => {
       // SENDING FORGET MAIL USER
 
       // delete cookie email and other token
-      return res.status(200).json({
-        success: true,
-        message: "password reset successfully",
-      });
+      return res.status(200).json({ status: 1, data: {}, message: "Password reset successfully" })
     } else {
       return res.status(400).json({
         status: 0,
