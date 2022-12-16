@@ -18,12 +18,12 @@ describe('Auth Test', () => {
 
 module.exports = [{
     _id: "624154039d41f6aa67c0cd93",
-    name: "saman arshad",
-    email: "saman.arshad97@gmail.com",
+    name: "John Doe",
+    email: ["saman.arshad97@gmail.com"],
     password: "test0000",
     tokens: [{
         access: 'auth',
-        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjI0MTU0MDM5ZDQxZjZhYTY3YzBjZDkzIiwianRpIjoib1ZmUFhSM0ZERCIsImlhdCI6MTY1NjkyNjk1MywiZXhwIjoxNjU4MjIyOTUzfQ.GETfgbJTuyKRft1es-qPr9rT0gBlZKXVSFMau5RHhbA'
+        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjI0MTU0MDM5ZDQxZjZhYTY3YzBjZDkzIiwianRpIjoiN3VwWHB6TXlaQyIsImlhdCI6MTY1ODIwNjU3OSwiZXhwIjoxNjU5NTAyNTc5fQ.WbA690Ases7xK2Y0MCpOeXHSz0uRYun2vqII6AmBKHU'
     }],
     otp: "PZVKTU",
     password: "test0000",
@@ -32,7 +32,7 @@ module.exports = [{
     //last index project code get from project created with test api  
     // router.post('/',isAuth,isSuperAdmin,createNewProject)
     newProjetDetails: {
-        name: "test_neeraj",
+        name: "test run project",
         description: "Testing for LogCat Server",
         device_type: ["Type 1", "Type 2"]
     },

@@ -1,15 +1,15 @@
-const fs = require("fs");
-const Projects = require("../model/project");
-const ValidateHelper = require("../helper/validatorMiddleware");
+const fs = require('fs');
+const Projects = require('../model/project');
+const ValidateHelper = require('../helper/validatorMiddleware');
 
 // Unique number
 const {
   makeId,
   removeAllSpecialChars,
   checkCollectionName,
-} = require("../helper/helperFunctions");
-const project = require("../model/project");
-const AppError = require("../utils/appError");
+} = require('../helper/helperFunctions');
+const project = require('../model/project');
+const AppError = require('../utils/appError');
 // const catchAsync = require("../utils/catchAsync");
 
 /**
@@ -20,13 +20,25 @@ const AppError = require("../utils/appError");
 
 const getAllRegisteredProjects = async (req, res) => {
   try {
-  } catch (error) {}
-  const allRgisterProject = await Projects.find();
-  return res.status(200).json({
-    status: 1,
-    data: { data: allRgisterProject },
-    message: "Successful",
-  });
+    const allRgisterProject = await Projects.find();
+    return res.status(200).json({
+      status: 1,
+      data: { data: allRgisterProject },
+      message: 'Successful',
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: -1,
+      data: {
+        err: {
+          generatedTime: new Date(),
+          errMsg: err.stack,
+          msg: err.message,
+          type: err.name,
+        },
+      },
+    });
+  }
 };
 /**
  * api      POST @/project_name
@@ -48,9 +60,9 @@ const createNewProject = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Invalid data entered.",
-            msg: "Invalid data entered.",
-            type: "Internal Server Error",
+            errMsg: 'Invalid data entered.',
+            msg: 'Invalid data entered.',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -62,7 +74,7 @@ const createNewProject = async (req, res) => {
       typeCodeArray.push(`"00${i + 1}"`);
     }
 
-    const isCollectionExist = await checkCollectionName(name + "_collection");
+    const isCollectionExist = await checkCollectionName(name + '_collection');
 
     if (isCollectionExist) {
       return res.status(409).json({
@@ -70,19 +82,19 @@ const createNewProject = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Project with provided name already exist!!",
-            msg: "Project with provided name already exist!!",
-            type: "Internal Server Error",
+            errMsg: 'Project with provided name already exist!!',
+            msg: 'Project with provided name already exist!!',
+            type: 'Internal Server Error',
           },
         },
       });
     }
 
     const collection_name =
-      removeAllSpecialChars(name).toLowerCase() + "_collection";
+      removeAllSpecialChars(name).toLowerCase() + '_collection';
 
     const alert_collection_name =
-      "alert_" + removeAllSpecialChars(name).toLowerCase() + "_collection";
+      'alert_' + removeAllSpecialChars(name).toLowerCase() + '_collection';
 
     const project = await new Projects({
       name,
@@ -99,9 +111,9 @@ const createNewProject = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "project not saved",
-            msg: "project not saved",
-            type: "MongodbError",
+            errMsg: 'project not saved',
+            msg: 'project not saved',
+            type: 'MongodbError',
           },
         },
       });
@@ -164,8 +176,8 @@ const createNewProject = async (req, res) => {
       `${__dirname.concat(`/../model/${alert_collection_name}.js`)}`,
       alertSchemaBlueprint,
       {
-        encoding: "utf8",
-        flag: "w",
+        encoding: 'utf8',
+        flag: 'w',
         mode: 0o666,
       },
       (err) => {
@@ -175,9 +187,9 @@ const createNewProject = async (req, res) => {
             data: {
               err: {
                 generatedTime: new Date(),
-                errMsg: "Some error occurred during alert schema creation",
-                msg: "Some error occurred during alert schema creation",
-                type: "Internal Server Error",
+                errMsg: 'Some error occurred during alert schema creation',
+                msg: 'Some error occurred during alert schema creation',
+                type: 'Internal Server Error',
               },
             },
           });
@@ -230,8 +242,8 @@ const createNewProject = async (req, res) => {
       `${__dirname.concat(`/../model/${collection_name}.js`)}`,
       schemaBlueprint,
       {
-        encoding: "utf8",
-        flag: "w",
+        encoding: 'utf8',
+        flag: 'w',
         mode: 0o666,
       },
       (err) => {
@@ -241,9 +253,9 @@ const createNewProject = async (req, res) => {
             data: {
               err: {
                 generatedTime: new Date(),
-                errMsg: "Some error occurred during project schema creation",
-                msg: "Some error occurred during project schema creation",
-                type: "Internal Server Error",
+                errMsg: 'Some error occurred during project schema creation',
+                msg: 'Some error occurred during project schema creation',
+                type: 'Internal Server Error',
               },
             },
           });
@@ -255,7 +267,7 @@ const createNewProject = async (req, res) => {
     return res.status(201).json({
       status: 1,
       data: { savedProject: savedProject },
-      message: "Project Saved successfully",
+      message: 'Project Saved successfully',
     });
   } catch (err) {
     return res.status(500).json({
@@ -288,9 +300,9 @@ const getProjectWithProjectCode = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Project not found",
-            msg: "Project not found",
-            type: "Internal Server Error",
+            errMsg: 'Project not found',
+            msg: 'Project not found',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -299,7 +311,7 @@ const getProjectWithProjectCode = async (req, res) => {
     res.status(200).json({
       status: 1,
       data: { data: getProject },
-      message: "Successful",
+      message: 'Successful',
     });
   } catch (err) {
     return res.status(500).json({
@@ -328,7 +340,7 @@ const updateProjectWithProjectCode = async (req, res) => {
   try {
     const { projectCode } = req.params;
     const { name, description, device_type } = req.body;
-    var isDuplicate = false
+    var isDuplicate = false;
 
     const getProjectWithProjectCode = await Projects.findOne({
       code: projectCode,
@@ -340,9 +352,9 @@ const updateProjectWithProjectCode = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Project not found",
-            msg: "Project not found",
-            type: "Internal Server Error",
+            errMsg: 'Project not found',
+            msg: 'Project not found',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -353,12 +365,13 @@ const updateProjectWithProjectCode = async (req, res) => {
     const addNewElementToArray = [];
     const newTypeCodeArray = [];
     if (device_type.length) {
-      const getLengthOfExistingDeviceType =  getProjectWithProjectCode.device_types.length;
- 
+      const getLengthOfExistingDeviceType =
+        getProjectWithProjectCode.device_types.length;
+
       getProjectWithProjectCode.device_types.forEach((deviceType) => {
-        if(device_type.includes(deviceType.typeName)) {
-          isDuplicate = true
-          return
+        if (device_type.includes(deviceType.typeName)) {
+          isDuplicate = true;
+          return;
         }
       });
 
@@ -387,7 +400,7 @@ const updateProjectWithProjectCode = async (req, res) => {
         });
         newTypeCodeArray.push(`"00${getLengthOfExistingDeviceType + i + 1}"`);
       }
-    
+
       const schemaBlueprint = `
       const mongoose = require('mongoose');
       const device = require('./device')
@@ -433,8 +446,8 @@ const updateProjectWithProjectCode = async (req, res) => {
         )}`,
         schemaBlueprint,
         {
-          encoding: "utf8",
-          flag: "w",
+          encoding: 'utf8',
+          flag: 'w',
           mode: 0o666,
         },
         (err) => {
@@ -446,7 +459,7 @@ const updateProjectWithProjectCode = async (req, res) => {
                   generatedTime: new Date(),
                   errMsg: "Can't write file",
                   msg: "Can't write file",
-                  type: "File system Error",
+                  type: 'File system Error',
                 },
               },
             });
@@ -466,7 +479,8 @@ const updateProjectWithProjectCode = async (req, res) => {
       : getProjectWithProjectCode.device_types;
     // Updating Data
 
-    const isGetProjectWithProjectCodeSaved = await getProjectWithProjectCode.save();
+    const isGetProjectWithProjectCodeSaved =
+      await getProjectWithProjectCode.save();
 
     if (!isGetProjectWithProjectCodeSaved) {
       return res.status(500).json({
@@ -474,18 +488,18 @@ const updateProjectWithProjectCode = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Some error occurred during updating the project!!",
-            msg: "Some error occurred during updating the project!!",
-            type: "Internal Server Error",
+            errMsg: 'Some error occurred during updating the project!!',
+            msg: 'Some error occurred during updating the project!!',
+            type: 'Internal Server Error',
           },
         },
       });
-    } else return res.status(200).json({
-      status: 1,
-      data: {},
-      message: "Project details Updated!!",
-    });
-
+    } else
+      return res.status(200).json({
+        status: 1,
+        data: {},
+        message: 'Project details Updated!!',
+      });
   } catch (err) {
     return res.status(500).json({
       status: -1,
@@ -512,9 +526,9 @@ const addEmailWithProjectCode = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "No email available.",
-            msg: "No email available.",
-            type: "Internal Server Error",
+            errMsg: 'No email available.',
+            msg: 'No email available.',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -528,9 +542,9 @@ const addEmailWithProjectCode = async (req, res) => {
           data: {
             err: {
               generatedTime: new Date(),
-              errMsg: "Check entered email",
-              msg: "Check entered email",
-              type: "Internal Server Error",
+              errMsg: 'Check entered email',
+              msg: 'Check entered email',
+              type: 'Internal Server Error',
             },
           },
         });
@@ -550,9 +564,9 @@ const addEmailWithProjectCode = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Project not found",
-            msg: "Project not found",
-            type: "Internal Server Error",
+            errMsg: 'Project not found',
+            msg: 'Project not found',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -568,9 +582,9 @@ const addEmailWithProjectCode = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Some error occurred during updating the project!!",
-            msg: "Some error occurred during updating the project!!",
-            type: "Internal Server Error",
+            errMsg: 'Some error occurred during updating the project!!',
+            msg: 'Some error occurred during updating the project!!',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -586,7 +600,7 @@ const addEmailWithProjectCode = async (req, res) => {
     res.status(200).json({
       status: 1,
       data: emailList,
-      message: "Project details Updated!!",
+      message: 'Project details Updated!!',
     });
   } catch (err) {
     return res.status(500).json({
@@ -618,9 +632,9 @@ const getProjectDetails = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Project code required.",
-            msg: "Project code required.",
-            type: "Internal Server Error",
+            errMsg: 'Project code required.',
+            msg: 'Project code required.',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -633,9 +647,9 @@ const getProjectDetails = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Project not found",
-            msg: "Project not found",
-            type: "Internal Server Error",
+            errMsg: 'Project not found',
+            msg: 'Project not found',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -654,9 +668,9 @@ const getProjectDetails = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Collection Not Found",
-            msg: "Collection Not Found",
-            type: "Internal Server Error",
+            errMsg: 'Collection Not Found',
+            msg: 'Collection Not Found',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -665,15 +679,15 @@ const getProjectDetails = async (req, res) => {
     const totalUsers = await collectionName.aggregate([
       {
         $lookup: {
-          from: "devices",
-          localField: "device",
-          foreignField: "_id",
-          as: "device",
+          from: 'devices',
+          localField: 'device',
+          foreignField: '_id',
+          as: 'device',
         },
       },
       {
         $group: {
-          _id: "$device.did",
+          _id: '$device.did',
         },
       },
     ]);
@@ -686,7 +700,7 @@ const getProjectDetails = async (req, res) => {
         modelList,
         deviceCount: totalUsers.length || 0,
       },
-      message: "successfull",
+      message: 'successfull',
     });
   } catch (err) {
     return res.status(500).json({
