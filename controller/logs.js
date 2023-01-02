@@ -22,7 +22,7 @@ const createLogs = async (req, res) => {
     const findProjectWithCode = await Projects.findOne({ code: project_code });
 
     if (!findProjectWithCode) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -134,7 +134,7 @@ const createLogsV2 = async (req, res) => {
     const findProjectWithCode = await Projects.findOne({ code: project_code });
 
     if (!findProjectWithCode) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -506,7 +506,6 @@ const createAlerts = async (req, res, next) => {
           msg: ac.msg,
           code: ac.code,
           date: ac.timestamp,
-          controls: ac.controls,
         },
         type: type,
       });
@@ -1018,7 +1017,7 @@ const crashlyticsData = async (req, res) => {
     }
     const projectCollection = await Projects.findOne({ code: projectCode });
     if (!projectCollection) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1158,7 +1157,7 @@ const getErrorCountByOSArchitecture = async (req, res) => {
     }
 
     if (!isProjectExist) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1356,7 +1355,7 @@ const dateWiseCrashCount = async (req, res) => {
     }
     const projectCollection = await Projects.findOne({ code: projectCode });
     if (!projectCollection) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1512,7 +1511,7 @@ const dateWiseLogOccurrencesByLogMsg = async (req, res) => {
     }
 
     if (!projectCode) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1526,7 +1525,7 @@ const dateWiseLogOccurrencesByLogMsg = async (req, res) => {
     }
     const projectCollection = await Projects.findOne({ code: projectCode });
     if (!projectCollection) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1683,7 +1682,7 @@ const getLogsCountWithOs = async (req, res) => {
     const projectCollection = await Projects.findOne({ code: projectCode });
     if (!projectCollection) {
       // throw new AppError(`Project not found.`, 404); // NJ-changes 13 Apr
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1742,7 +1741,7 @@ const getLogsCountWithModelName = async (req, res) => {
     const { projectCode } = req.params;
     if (!projectCode) {
       // throw new AppError(`Project code not provided.`, 400); // NJ-changes 13 Apr
-      return res.status(500).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1758,7 +1757,7 @@ const getLogsCountWithModelName = async (req, res) => {
     const projectCollection = await Projects.findOne({ code: projectCode });
     if (!projectCollection) {
       // throw new AppError(`Project not found.`, 404); // NJ-changes 13 Apr
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1814,7 +1813,7 @@ const getCrashOccurrenceByLogMsg = async (req, res) => {
     const { projectCode } = req.params;
 
     if (!req.query.projectType) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1930,7 +1929,7 @@ const getErrorCountByVersion = async (req, res) => {
 
     if (!req.query.projectType) {
       // throw new AppError(`project type is required`, 400); // NJ-changes 13 Apr
-      return res.status(500).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -1944,7 +1943,7 @@ const getErrorCountByVersion = async (req, res) => {
     }
 
     if (!isProjectExist) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
