@@ -347,7 +347,7 @@ const updateProjectWithProjectCode = async (req, res) => {
     });
 
     if (!getProjectWithProjectCode) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
@@ -559,7 +559,7 @@ const addEmailWithProjectCode = async (req, res) => {
     });
 
     if (!getProjectWithProjectCode) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {

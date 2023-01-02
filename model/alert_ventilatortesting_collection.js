@@ -39,7 +39,6 @@ const alert_ventilatortesting_collectionSchema = new mongoose.Schema(
         type: Date,
         required: [true, 'Date time is required'],
       },
-      controls: [Object],
     },
   },
   schemaOptions

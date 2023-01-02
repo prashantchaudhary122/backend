@@ -1,10 +1,10 @@
-const bcrypt = require("bcrypt");
-const { makeId } = require("../helper/helperFunctions");
-const JWTR = require("jwt-redis").default;
-const Users = require("../model/users");
-const ForgetPassword = require("../model/forgetPassword");
-const Email = require("../utils/email");
-let redisClient = require("../config/redisInit");
+const bcrypt = require('bcrypt');
+const { makeId } = require('../helper/helperFunctions');
+const JWTR = require('jwt-redis').default;
+const Users = require('../model/users');
+const ForgetPassword = require('../model/forgetPassword');
+const Email = require('../utils/email');
+let redisClient = require('../config/redisInit');
 const { validationResult } = require('express-validator');
 
 const jwtr = new JWTR(redisClient);
@@ -24,11 +24,14 @@ const registerUser = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: errors.array().map((err) => {
-              return `${err.msg}: ${err.param}` 
-            }).join(" | "), 
-            msg: "Invalid data entered.",
-            type: "ValidationError",
+            errMsg: errors
+              .array()
+              .map((err) => {
+                return `${err.msg}: ${err.param}`;
+              })
+              .join(' | '),
+            msg: 'Invalid data entered.',
+            type: 'ValidationError',
           },
         },
       });
@@ -41,9 +44,9 @@ const registerUser = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Email already taken",
-            msg: "Email already taken",
-            type: "Duplicate Key Error",
+            errMsg: 'Email already taken',
+            msg: 'Email already taken',
+            type: 'Duplicate Key Error',
           },
         },
       });
@@ -55,9 +58,9 @@ const registerUser = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Please fill all the details.",
-            msg: "Please fill all the details.",
-            type: "Client Error",
+            errMsg: 'Please fill all the details.',
+            msg: 'Please fill all the details.',
+            type: 'Client Error',
           },
         },
       });
@@ -71,20 +74,20 @@ const registerUser = async (req, res) => {
       email,
       isSuperAdmin: false,
       passwordHash,
-      image: "",
+      image: '',
     });
 
     const savedUser = await user.save(user);
 
     if (savedUser) {
-      const url = `${req.protocol}://${req.get("host")}/welcome`;
+      const url = `${req.protocol}://${req.get('host')}/welcome`;
 
       new Email(email, url).sendWelcome();
 
       res.status(201).json({
         status: 1,
         data: { name: savedUser.name, avatar: savedUser.image },
-        message: "Registered successfully!",
+        message: 'Registered successfully!',
       });
     } else {
       res.status(500).json({
@@ -92,9 +95,9 @@ const registerUser = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Some error happened during registration",
-            msg: "Some error happened during registration",
-            type: "MongodbError",
+            errMsg: 'Some error happened during registration',
+            msg: 'Some error happened during registration',
+            type: 'MongodbError',
           },
         },
       });
@@ -132,11 +135,14 @@ const loginUser = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: errors.array().map((err) => {
-              return `${err.msg}: ${err.param}` 
-            }).join(" | "), 
-            msg: "Invalid data entered.",
-            type: "ValidationError",
+            errMsg: errors
+              .array()
+              .map((err) => {
+                return `${err.msg}: ${err.param}`;
+              })
+              .join(' | '),
+            msg: 'Invalid data entered.',
+            type: 'ValidationError',
           },
         },
       });
@@ -150,9 +156,9 @@ const loginUser = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "User not available with this email address.",
-            msg: "User not available with this email address.",
-            type: "Internal Server Error",
+            errMsg: 'User not available with this email address.',
+            msg: 'User not available with this email address.',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -169,9 +175,9 @@ const loginUser = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Password is incorrect",
-            msg: "Password is incorrect",
-            type: "Internal Server Error",
+            errMsg: 'Password is incorrect',
+            msg: 'Password is incorrect',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -179,7 +185,7 @@ const loginUser = async (req, res) => {
 
     const id = { user: isUserExist._id };
     const token = await jwtr.sign(id, process.env.JWT_SECRET, {
-      expiresIn: "15d",
+      expiresIn: '15d',
     });
 
     return res.status(200).json({
@@ -211,16 +217,16 @@ const loginUser = async (req, res) => {
 const updateUserProfile = async (req, res) => {
   try {
     const { name } = req.body;
-    const user = await Users.findById(req.user)
+    const user = await Users.findById(req.user);
     if (!user) {
       return res.status(404).json({
         status: 0,
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "User does not found",
-            msg: "User does not found",
-            type: "Mongodb Error",
+            errMsg: 'User does not found',
+            msg: 'User does not found',
+            type: 'Mongodb Error',
           },
         },
       });
@@ -237,16 +243,16 @@ const updateUserProfile = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "User profile update fail",
-            msg: "User profile update fail",
-            type: "Internal Server Error",
+            errMsg: 'User profile update fail',
+            msg: 'User profile update fail',
+            type: 'Internal Server Error',
           },
         },
       });
     }
 
     return res.status(200).json({
-      message: "User details updated successfully!",
+      message: 'User details updated successfully!',
       name: isSaved.name,
       avatar: isSaved.image,
     });
@@ -276,11 +282,14 @@ const userForgetPassword = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: errors.array().map((err) => {
-              return `${err.msg}: ${err.param}` 
-            }).join(" | "), 
-            msg: "Invalid data entered.",
-            type: "ValidationError",
+            errMsg: errors
+              .array()
+              .map((err) => {
+                return `${err.msg}: ${err.param}`;
+              })
+              .join(' | '),
+            msg: 'Invalid data entered.',
+            type: 'ValidationError',
           },
         },
       });
@@ -289,14 +298,14 @@ const userForgetPassword = async (req, res) => {
     const user = await Users.findOne({ email });
 
     if (!user) {
-      return res.status(400).json({
+      return res.status(404).json({
         status: 0,
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Email does not exist!",
-            msg: "Email does not exist!",
-            type: "Internal Server Error",
+            errMsg: 'Email does not exist!',
+            msg: 'Email does not exist!',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -318,9 +327,9 @@ const userForgetPassword = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Otp not send.",
-            msg: "Otp not send.",
-            type: "Internal ServerError",
+            errMsg: 'Otp not send.',
+            msg: 'Otp not send.',
+            type: 'Internal ServerError',
           },
         },
       });
@@ -364,11 +373,14 @@ const resetForgetPassword = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: errors.array().map((err) => {
-              return `${err.msg}: ${err.param}`
-            }).join(" | "),
-            msg: "Invalid data entered.",
-            type: "ValidationError",
+            errMsg: errors
+              .array()
+              .map((err) => {
+                return `${err.msg}: ${err.param}`;
+              })
+              .join(' | '),
+            msg: 'Invalid data entered.',
+            type: 'ValidationError',
           },
         },
       });
@@ -380,9 +392,9 @@ const resetForgetPassword = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Make sure your passwords match.",
-            msg: "Make sure your passwords match.",
-            type: "ValidationError",
+            errMsg: 'Make sure your passwords match.',
+            msg: 'Make sure your passwords match.',
+            type: 'ValidationError',
           },
         },
       });
@@ -398,9 +410,9 @@ const resetForgetPassword = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "OTP does not exist!",
-            msg: "OTP does not exist!",
-            type: "Internal Server Error",
+            errMsg: 'OTP does not exist!',
+            msg: 'OTP does not exist!',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -414,9 +426,9 @@ const resetForgetPassword = async (req, res) => {
           err: {
             generatedTime: new Date(),
             errMsg:
-              "You cannot set your previous password as new password, Enter new password!",
-            msg: "You cannot set your previous password as new password, Enter new password!",
-            type: "Internal Server Error",
+              'You cannot set your previous password as new password, Enter new password!',
+            msg: 'You cannot set your previous password as new password, Enter new password!',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -434,9 +446,9 @@ const resetForgetPassword = async (req, res) => {
           data: {
             err: {
               generatedTime: new Date(),
-              errMsg: "User not saved",
-              msg: "User not saved",
-              type: "MongodbError",
+              errMsg: 'User not saved',
+              msg: 'User not saved',
+              type: 'MongodbError',
             },
           },
         });
@@ -448,16 +460,18 @@ const resetForgetPassword = async (req, res) => {
       // SENDING FORGET MAIL USER
 
       // delete cookie email and other token
-      return res.status(200).json({ status: 1, data: {}, message: "Password reset successfully" })
+      return res
+        .status(200)
+        .json({ status: 1, data: {}, message: 'Password reset successfully' });
     } else {
       return res.status(400).json({
         status: 0,
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "OTP does not match, try again!",
-            msg: "OTP does not match, try again!",
-            type: "Internal Server Error",
+            errMsg: 'OTP does not match, try again!',
+            msg: 'OTP does not match, try again!',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -483,7 +497,7 @@ const logoutUser = async (req, res) => {
     await jwtr.destroy(req.jti);
     return res
       .status(200)
-      .json({ status: 1, data: {}, message: "Logged out successfully!" });
+      .json({ status: 1, data: {}, message: 'Logged out successfully!' });
     // return res.json({'message':'Logged out successfully!','token':token});
   } catch (err) {
     return res.status(500).json({
@@ -513,9 +527,9 @@ const userPasswordChange = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Current password should not be empty",
-            msg: "Current password should not be empty",
-            type: "Client  Error",
+            errMsg: 'Current password should not be empty',
+            msg: 'Current password should not be empty',
+            type: 'Client  Error',
           },
         },
       });
@@ -527,9 +541,9 @@ const userPasswordChange = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "new password should not be empty",
-            msg: "new password should not be empty",
-            type: "Client  Error",
+            errMsg: 'new password should not be empty',
+            msg: 'new password should not be empty',
+            type: 'Client  Error',
           },
         },
       });
@@ -541,9 +555,9 @@ const userPasswordChange = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Current and New password should not be same`",
-            msg: "Current and New password should not be same`",
-            type: "Client  Error",
+            errMsg: 'Current and New password should not be same`',
+            msg: 'Current and New password should not be same`',
+            type: 'Client  Error',
           },
         },
       });
@@ -564,9 +578,9 @@ const userPasswordChange = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "Current password is incorrect",
-            msg: "Current password is incorrect",
-            type: "Internal Server Error",
+            errMsg: 'Current password is incorrect',
+            msg: 'Current password is incorrect',
+            type: 'Internal Server Error',
           },
         },
       });
@@ -580,7 +594,7 @@ const userPasswordChange = async (req, res) => {
 
     return res
       .status(200)
-      .json({ status: 1, data: {}, message: "Password changed successfully!" });
+      .json({ status: 1, data: {}, message: 'Password changed successfully!' });
   } catch (err) {
     return res.status(500).json({
       status: -1,
@@ -598,8 +612,7 @@ const userPasswordChange = async (req, res) => {
 
 const getUserByUserId = async (req, res) => {
   try {
-    
-    const user = await Users.findById(req.user).select('-passwordHash')
+    const user = await Users.findById(req.user).select('-passwordHash');
 
     if (!user) {
       return res.status(404).json({
@@ -607,9 +620,9 @@ const getUserByUserId = async (req, res) => {
         data: {
           err: {
             generatedTime: new Date(),
-            errMsg: "User not found",
-            msg: "User not found",
-            type: "MongoDBError",
+            errMsg: 'User not found',
+            msg: 'User not found',
+            type: 'MongoDBError',
           },
         },
       });
@@ -618,7 +631,7 @@ const getUserByUserId = async (req, res) => {
     res.status(200).json({
       status: 1,
       data: { user },
-      message: "Successful",
+      message: 'Successful',
     });
   } catch (err) {
     return res.status(500).json({
@@ -643,5 +656,5 @@ module.exports = {
   userForgetPassword,
   resetForgetPassword,
   userPasswordChange,
-  getUserByUserId
+  getUserByUserId,
 };
