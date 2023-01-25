@@ -30,6 +30,7 @@ const {
   getFilteredLogs,
   getAlertsWithFilter,
   getErrorCountByVersion,
+  createEvents
 } = require("../controller/logs");
 
 const { isAuth } = require("../middleware/authMiddleware");
@@ -86,6 +87,12 @@ router.post("/alerts/:project_code",
   body('ack.*.code').notEmpty(),
   body('ack.*.timestamp').notEmpty(),
   createAlerts);
+  router.post("/events/:project_code",
+  body('did').notEmpty(),
+  body('type').notEmpty(),
+  body('ack.*.code').notEmpty(),
+  body('ack.*.timestamp').notEmpty(),
+  createEvents);
 
 //Protected Route
 router.get("/:projectCode", isAuth, getFilteredLogs);

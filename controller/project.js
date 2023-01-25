@@ -95,6 +95,8 @@ const createNewProject = async (req, res) => {
 
     const alert_collection_name =
       'alert_' + removeAllSpecialChars(name).toLowerCase() + '_collection';
+    const event_collection_name=
+    'event_'+removeAllSpecialChars(name).toLowerCase()+'_collection';
 
     const project = await new Projects({
       name,
@@ -103,6 +105,7 @@ const createNewProject = async (req, res) => {
       device_types: arrayOfObjects,
       collection_name,
       alert_collection_name,
+      event_collection_name
     });
     const savedProject = await project.save(project);
     if (!savedProject) {
@@ -175,6 +178,84 @@ const createNewProject = async (req, res) => {
     fs.writeFile(
       `${__dirname.concat(`/../model/${alert_collection_name}.js`)}`,
       alertSchemaBlueprint,
+      {
+        encoding: 'utf8',
+        flag: 'w',
+        mode: 0o666,
+      },
+      (err) => {
+        if (err) {
+          return res.status(500).json({
+            status: 0,
+            data: {
+              err: {
+                generatedTime: new Date(),
+                errMsg: 'Some error occurred during alert schema creation',
+                msg: 'Some error occurred during alert schema creation',
+                type: 'Internal Server Error',
+              },
+            },
+          });
+        }
+      }
+    );
+    const eventSchemaBlueprint = `
+    const mongoose = require('mongoose');
+    
+        const schemaOptions = {
+            timestamps: true,
+            toJSON: {
+                virtuals: false
+            },
+            toObject: {
+                virtuals: false
+            }
+        }
+        
+        const ${event_collection_name}Schema = new mongoose.Schema(
+            {
+              did:  {
+                type: String,
+                required: [true, "Device id is required."],
+                // validate: {
+                //     validator: function (v) {
+                //     return /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4})$/.test(
+                //         v
+                //     );
+                //     },
+                //     message: "{VALUE} is not a valid device id.",
+                // },
+            },
+                type: {
+                  type: String,
+                  enum: [${typeCodeArray}],
+                  required: [true, "Atleast one model required."]
+                },
+                ack:{
+                    msg: String,
+                    code: {
+                      type: String,
+                      required: [true, 'Code is required']
+                    },
+                    date: {
+                      type: Date,
+                      required: [true, 'Date time is required']
+                    }
+                  }
+            },
+            schemaOptions
+        )
+
+        ${event_collection_name}Schema.index({'type': 1})
+                
+        const ${event_collection_name} = mongoose.model('${event_collection_name}', ${event_collection_name}Schema)
+        
+        module.exports = ${event_collection_name}
+        `;
+
+    fs.writeFile(
+      `${__dirname.concat(`/../model/${event_collection_name}.js`)}`,
+      eventSchemaBlueprint,
       {
         encoding: 'utf8',
         flag: 'w',

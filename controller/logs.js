@@ -127,6 +127,7 @@ const createLogs = async (req, res) => {
   }
 };
 
+
 const createLogsV2 = async (req, res) => {
   try {
     const { project_code } = req.params;
@@ -558,6 +559,124 @@ const createAlerts = async (req, res, next) => {
     });
   }
 };
+const createEvents= async(req,res)=>{
+  try{
+
+    const{project_code}=req.params;
+    const findProjectWithCode = await Projects.findOne({ code: project_code });
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        status: 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: errors
+              .array()
+              .map((err) => {
+                return `${err.msg}: ${err.param}`;
+              })
+              .join(' | '),
+            msg: 'Invalid data entered.',
+            type: 'ValidationError',
+          },
+        },
+      });
+    }
+    if(!findProjectWithCode){
+      return res.status(404).json({
+        status: 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: 'Project does not exist',
+            msg: 'Project does not exist',
+            type: 'MongoDb Error',
+          },
+        },
+      });
+    }
+
+    
+    if (!req.query.projectType) {
+      return res.status(400).json({
+        status: 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: 'Project type is required',
+            msg: 'Project type is required',
+            type: 'Client Error',
+          },
+        },
+      });
+    }
+    const collectionName = findProjectWithCode.event_collection_name;
+    const modelReference = require(`../model/${collectionName}`);
+    const {did,ack,type}=req.body;
+    let dbSavePromise = ack.map(async (ac) => {
+      const putDataIntoLoggerDb = await new modelReference({
+        did: did,
+        ack: {
+          msg: ac.msg,
+          code: ac.code,
+          date: ac.timestamp,
+        },
+        type: type,
+      });
+
+      return putDataIntoLoggerDb.save(putDataIntoLoggerDb);
+    });
+
+    let events = await Promise.allSettled(dbSavePromise);
+
+    var eventsErrArr = [];
+    var eventsErrMsgArr = [];
+
+    events.map((alert) => {
+      eventsErrArr.push(events.status);
+      if (events.status === 'rejected') {
+        eventsErrMsgArr.push(events.reason.message);
+      }
+    });
+
+    if (!eventsErrArr.includes('rejected')) {
+      return res.status(201).json({
+        status: 1,
+        data: { eventsCount: events.length },
+        message: 'Successful',
+      });
+    } else {
+      res.status(400).json({
+        status: eventsErrArr.length === events.length ? -1 : 0,
+        data: {
+          err: {
+            generatedTime: new Date(),
+            errMsg: eventsErrMsgArr.join(' | '),
+            msg: `Error saving ${eventsErrMsgArr.length} out of ${events.length} events(s)`,
+            type: 'ValidationError',
+          },
+        },
+      });
+    }
+    
+
+  }
+  catch(err){ return res.status(500).json({
+    status: -1,
+    data: {
+      err: {
+        generatedTime: new Date(),
+        errMsg: err.stack,
+        msg: err.message,
+        type: err.name,
+      },
+    },
+  });
+}
+};
+
 
 /**
  * desc     get project with filter
@@ -2000,4 +2119,5 @@ module.exports = {
   getLogsCountWithModelName,
   getCrashOccurrenceByLogMsg,
   getErrorCountByVersion,
+  createEvents
 };
